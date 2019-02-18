@@ -1,0 +1,45 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Magento 2.1 Security Groups template
+Parameters:
+  AccessCIDR:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: Must be a valid IP range in x.x.x.x/x notation
+    Description: 'The CIDR IP range that is permitted to access. Note: a value of
+      0.0.0.0/0 will allow access from ANY ip address'
+    Type: String
+  VPCID:
+    Type: AWS::EC2::VPC::Id
+Resources:
+  MySQLRDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow access to MySQL Port (AWS Quick Start)
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '3306'
+        ToPort: '3306'
+        SourceSecurityGroupId: !GetAtt WebServerSecurityGroup.GroupId
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: App Server Security Group (AWS Quick Start)
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: !Ref AccessCIDR
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 0.0.0.0/0
+Outputs:
+  MySQLRDSSecurityGroup:
+    Description: MySQL Security Group
+    Value: !Ref MySQLRDSSecurityGroup
+  WebServerSecurityGroup:
+    Description: Web Server Security Group
+    Value: !Ref WebServerSecurityGroup
+...
