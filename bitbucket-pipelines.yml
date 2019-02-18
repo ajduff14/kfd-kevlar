@@ -1,0 +1,8 @@
+pipelines:
+    default:
+        -   step:
+                name: Deploy to S3
+                deployment: production
+                image: atlassian/pipelines-awscli
+                script:
+                    - aws s3 cp . s3://deployment.kingfisherdirect/bb-cloudformation-templates/ --recursive --exclude "*.txt" --exclude "*.md" --exclude "*.git*" --exclude ".idea/*" --exclude="bitbucket-pipelines.yml"
