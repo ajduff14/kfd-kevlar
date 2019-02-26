@@ -402,11 +402,7 @@ Resources:
     Properties:
       KeyName: !Ref KeyPair
       IamInstanceProfile: !Ref NewIamInstanceProfile
-      ImageId:
-        !FindInMap
-        - AWSAMIRegionMap
-        - !Ref AWS::Region
-        - AMZNLINUXHVM
+      ImageId: ami-08d658f84a6d84a80
       InstanceType: !Ref WebServerInstanceType
       SubnetId:
         !Select
