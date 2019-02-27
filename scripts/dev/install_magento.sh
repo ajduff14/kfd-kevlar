@@ -57,18 +57,31 @@ fi
 EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
 EC2_REGION="`echo \"$EC2_AVAIL_ZONE\" | sed -e 's:\([0-9][0-9]*\)[a-z]*\$:\\1:'`"
 
-yum -y update
-yum -y install nginx php70-fpm php70-cli php70-mysqlnd php70-soap php70-xml php70-zip php70-json php70-mcrypt php70-intl php70-mbstring php70-zip php70-gd mysql56
 
-chkconfig nginx on
-chkconfig php-fpm-7.0 on
+# yum -y update
+sudo add-apt-repository -y ppa:ondrej/php
+sudo apt update && sudo apt -y upgrade
+# yum -y install nginx php70-fpm php70-cli php70-mysqlnd php70-soap php70-xml php70-zip php70-json php70-mcrypt php70-intl php70-mbstring php70-zip php70-gd mysql56
+# yum -y install nginx php70-fpm php70-cli php70-mysqlnd php70-soap php70-xml php70-zip php70-json php70-mcrypt php70-intl php70-mbstring php70-zip php70-gd mysql56
+sudo apt -y install nginx php7.3-fpm php7.3-cli php7.3-mysql php7.3-soap php7.3-xml php7.3-json php7.3-intl php7.3-mbstring php7.3-zip php7.3-gd
+
+sudo apt -y install heat-cfntools
+
+# Missing the following
+# php70-mcrypt
+# php70-mysqlnd used this instead=php7.3-mysql
+# mysql56
+
+# chkconfig nginx on
+# chkconfig php-fpm-7.0
+
 /etc/ssl/certs/make-dummy-cert /etc/ssl/certs/magento
 
 
-cat << EOF > /etc/php-fpm-7.0.conf
+cat << EOF > /etc/php/7.3/fpm/php-fpm.conf
 [global]
-pid = /var/run/php-fpm/php-fpm-7.0.pid
-error_log = /var/log/php-fpm/7.0/error.log
+pid = /var/run/php/php7.3-fpm.pid
+error_log = /var/log/php7.3/error.log
 daemonize = yes
 [www]
 user = nginx
@@ -82,14 +95,14 @@ pm.start_servers = 5
 pm.min_spare_servers = 5
 pm.max_spare_servers = 35
 slowlog = /var/log/php-fpm/www-slow.log
-php_admin_value[error_log] = /var/log/php-fpm/7.0/www-error.log
+php_admin_value[error_log] = /var/log/php7.3/www-error.log
 php_admin_flag[log_errors] = on
 php_value[session.save_handler] = files
-php_value[session.save_path]    = /var/lib/php/7.0/session
-php_value[soap.wsdl_cache_dir]  = /var/lib/php/7.0/wsdlcache
+php_value[session.save_path]    = /var/lib/php/7.3/session
+php_value[soap.wsdl_cache_dir]  = /var/lib/php/7.3/wsdlcache
 EOF
 
-service php-fpm-7.0 start
+service php7.3-fpm start
 
 if [ -z "$certificateid" ]
 then
@@ -433,7 +446,7 @@ EOF
 
 fi
 
-cat << 'EOF' > /etc/php-7.0.ini
+cat << 'EOF' > /etc/php/7.3/cli/php.ini
 [PHP]
 engine = On
 short_open_tag = Off
@@ -583,7 +596,7 @@ mkdir -p /var/www/html
 chown ec2-user:nginx /var/www/html
 chmod g+w /var/www/html/
 usermod -g nginx ec2-user
-chgrp -R nginx /var/lib/php/7.0/*
+chgrp -R nginx /var/lib/php/7.3/*
 service nginx start
 
 chmod a+x configure_magento.sh
@@ -598,7 +611,7 @@ fi
 sudo -u ec2-user /tmp/configure_magento.sh $dbhost $dbuser $dbpassword $dbname $cname $adminfirst $adminlast $adminemail $adminuser $adminpassword $magentourl $protocol $magentolanguage $magentocurrency $magentotimezone
 
 tar czf /root/media.tgz -C /var/www/html/pub/media .
-mount -t nfs4 -o vers=4.1 $efsid.efs.$EC2_REGION.amazonaws.com:/ /var/www/html/pub/media
+# mount -t nfs4 -o vers=4.1 $efsid.efs.$EC2_REGION.amazonaws.com:/ /var/www/html/pub/media
 rm -rf /var/www/html/pub/media/*
 tar xzf /root/media.tgz -C /var/www/html/pub/media
 
@@ -610,9 +623,9 @@ sed -i s/${adminpassword}/xxxxx/g /var/log/cloud-init.log
 rm -f ${PARAMS_FILE}
 
 cat << EOF > magento.cron
-* * * * * /usr/bin/php -c /etc/php-7.0.ini /var/www/html/bin/magento cron:run | grep -v "Ran jobs by schedule" >> /var/www/html/var/log/magento.cron.log
-* * * * * /usr/bin/php -c /etc/php-7.0.ini /var/www/html/update/cron.php >> /var/www/html/var/log/update.cron.log
-* * * * * /usr/bin/php -c /etc/php-7.0.ini /var/www/html/bin/magento setup:cron:run >> /var/www/html/var/log/setup.cron.log
+* * * * * /usr/bin/php -c /etc/php/7.3/php.ini /var/www/html/bin/magento cron:run | grep -v "Ran jobs by schedule" >> /var/www/html/var/log/magento.cron.log
+* * * * * /usr/bin/php -c /etc/php/7.3/php.ini /var/www/html/update/cron.php >> /var/www/html/var/log/update.cron.log
+* * * * * /usr/bin/php -c /etc/php/7.3/php.ini /var/www/html/bin/magento setup:cron:run >> /var/www/html/var/log/setup.cron.log
 EOF
 
 crontab -u ec2-user magento.cron

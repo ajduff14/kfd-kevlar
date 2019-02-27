@@ -180,5 +180,5 @@ fi
 
 ./magento deploy:mode:set production
 
-./magento info:adminuri > /home/ec2-user/adminuri
+./magento info:adminuri > /home/ubuntu/adminuri
 

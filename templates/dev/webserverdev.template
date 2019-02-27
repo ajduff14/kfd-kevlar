@@ -203,7 +203,7 @@ Resources:
     DependsOn: MagentoAMI
     Properties:
       Handle: !Ref MagentoAMIWaitHandle
-      Timeout: '5000'
+      Timeout: '4000'
   MagentoAMI:
     Type: AWS::EC2::Instance
     Metadata:
@@ -215,15 +215,14 @@ Resources:
       AWS::CloudFormation::Init:
         config:
           packages:
-            yum:
-              nfs-utils: []
+            apt:
               awslogs: []
           files:
             /etc/awslogs/awslogs.conf:
               content: !Sub |
                 [general]
                 state_file= /var/log/agent-state
-                [/home/ec2-user/misc/install]
+                [/home/ubuntu/misc/install]
                 file = /var/log/cloud-init-output.log
                 log_group_name = ${MagentoMainLogGroup}
                 log_stream_name = {instance_id}/magento/install.log
@@ -247,13 +246,13 @@ Resources:
               mode: '000400'
               owner: root
               group: root
-            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
-              content: !Sub |
-                [cfn-auto-reloader-hook]
-                triggers=post.update
-                path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init
-                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --region ${AWS::Region}
-                runas=root
+            # /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+            #   content: !Sub |
+            #     [cfn-auto-reloader-hook]
+            #     triggers=post.update
+            #     path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init
+            #     action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --region ${AWS::Region}
+            #     runas=root
             /install_magento.sh:
               source: !Sub https://s3.amazonaws.com/deployment.kingfisherdirect/bb-cloudformation-templates/scripts/dev/install_magento.sh
               mode: '000644'
@@ -266,7 +265,7 @@ Resources:
               owner: root
               group: root
               authentication: S3AccessCreds
-            /home/ec2-user/magento.tar.gz:
+            /home/ubuntu/magento.tar.gz:
               source: !Ref MagentoReleaseMedia
               mode: '000644'
               owner: root
@@ -306,7 +305,7 @@ Resources:
                 files:
                 - /etc/awslogs/awslogs.conf
                 packages:
-                  yum:
+                  apt:
                   - awslogs
     Properties:
       KeyName: !Ref KeyPair
@@ -322,7 +321,7 @@ Resources:
             /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource MagentoAMI  --region ${AWS::Region}
             chmod a+x install_magento.sh
             ./install_magento.sh /tmp/params.txt
-            /opt/aws/bin/cfn-signal -e $? -d "`cat /home/ec2-user/adminuri`" -r "Build Process Complete" '${MagentoAMIWaitHandle}'
+            /opt/aws/bin/cfn-signal -e $? -d "`cat /home/ubuntu/adminuri`" -r "Build Process Complete" '${MagentoAMIWaitHandle}'
       Tags:
       - Key: Application
         Value: AWS Quick Start (Magento)

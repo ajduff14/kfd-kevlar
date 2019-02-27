@@ -297,7 +297,7 @@ Resources:
       AWS::CloudFormation::Init:
         config:
           packages:
-            yum:
+            apt:
               nfs-utils: []
               awslogs: []
           files:
@@ -397,7 +397,7 @@ Resources:
                 files:
                 - /etc/awslogs/awslogs.conf
                 packages:
-                  yum:
+                  apt:
                   - awslogs
     Properties:
       KeyName: !Ref KeyPair
