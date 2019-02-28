@@ -57,15 +57,7 @@ fi
 EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
 EC2_REGION="`echo \"$EC2_AVAIL_ZONE\" | sed -e 's:\([0-9][0-9]*\)[a-z]*\$:\\1:'`"
 
-
-# yum -y update
-sudo add-apt-repository -y ppa:ondrej/php
-sudo apt update && sudo apt -y upgrade
-# yum -y install nginx php70-fpm php70-cli php70-mysqlnd php70-soap php70-xml php70-zip php70-json php70-mcrypt php70-intl php70-mbstring php70-zip php70-gd mysql56
-# yum -y install nginx php70-fpm php70-cli php70-mysqlnd php70-soap php70-xml php70-zip php70-json php70-mcrypt php70-intl php70-mbstring php70-zip php70-gd mysql56
 sudo apt -y install nginx php7.3-fpm php7.3-cli php7.3-mysql php7.3-soap php7.3-xml php7.3-json php7.3-intl php7.3-mbstring php7.3-zip php7.3-gd
-
-sudo apt -y install heat-cfntools
 
 # Missing the following
 # php70-mcrypt

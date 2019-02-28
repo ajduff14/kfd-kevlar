@@ -203,7 +203,7 @@ Resources:
     DependsOn: MagentoAMI
     Properties:
       Handle: !Ref MagentoAMIWaitHandle
-      Timeout: '4000'
+      Timeout: '300'
   MagentoAMI:
     Type: AWS::EC2::Instance
     Metadata:
@@ -213,11 +213,52 @@ Resources:
           type: S3
           roleName: !Ref NewIamInstanceRole
       AWS::CloudFormation::Init:
+        # configSets:
+        #   ascending:
+        #     - "installAwsLogs"
+        #     - "installMagento"
+        # installAwsLogs:
+        #   files:
+        #     /awslogs.conf:
+        #       content: !Sub |
+        #         [/home/ubuntu/misc/install]
+        #         datetime_format = %b %d %H:%M:%S
+        #         file = /var/log/cloud-init-output.log
+        #         buffer_duration = 5000
+        #         log_stream_name = {instance_id}/magento/install.log
+        #         initial_position = start_of_file
+        #         log_group_name = {instance_id}
+        #       mode: '000400'
+        #       owner: root
+        #       group: root
+        #     /install_awslogs.sh:
+        #       source: !Sub https://s3.amazonaws.com/deployment.kingfisherdirect/bb-cloudformation-templates/scripts/dev/install_awslogs.sh
+        #       mode: '000644'
+        #       owner: root
+        #       group: root
+        #       authentication: S3AccessCreds
+        #   commands:
+        #     command: "bash ./install_awslogs.sh"
         config:
-          packages:
-            apt:
-              awslogs: []
           files:
+            /awslogs.conf:
+              content: !Sub |
+                [/home/ubuntu/misc/install]
+                datetime_format = %b %d %H:%M:%S
+                file = /var/log/cloud-init-output.log
+                buffer_duration = 5000
+                log_stream_name = {instance_id}/magento/install.log
+                initial_position = start_of_file
+                log_group_name = {instance_id}
+              mode: '000400'
+              owner: root
+              group: root
+            /install_awslogs.sh:
+              source: !Sub https://s3.amazonaws.com/deployment.kingfisherdirect/bb-cloudformation-templates/scripts/dev/install_awslogs.sh
+              mode: '000644'
+              owner: root
+              group: root
+              authentication: S3AccessCreds
             /etc/awslogs/awslogs.conf:
               content: !Sub |
                 [general]
@@ -229,23 +270,23 @@ Resources:
               mode: '000400'
               owner: root
               group: root
-            /etc/awslogs/awscli.conf:
-              content: !Sub |
-                [plugins]
-                cwlogs = cwlogs
-                [default]
-                region = ${AWS::Region}
-              mode: '000400'
-              owner: root
-              group: root
-            /etc/cfn/cfn-hup.conf:
-              content: !Sub |
-                [main]
-                stack=${AWS::StackId}
-                region=${AWS::Region}
-              mode: '000400'
-              owner: root
-              group: root
+            # /etc/awslogs/awscli.conf:
+            #   content: !Sub |
+            #     [plugins]
+            #     cwlogs = cwlogs
+            #     [default]
+            #     region = ${AWS::Region}
+            #   mode: '000400'
+            #   owner: root
+            #   group: root
+            # /etc/cfn/cfn-hup.conf:
+            #   content: !Sub |
+            #     [main]
+            #     stack=${AWS::StackId}
+            #     region=${AWS::Region}
+            #   mode: '000400'
+            #   owner: root
+            #   group: root
             # /etc/cfn/hooks.d/cfn-auto-reloader.conf:
             #   content: !Sub |
             #     [cfn-auto-reloader-hook]
@@ -291,22 +332,22 @@ Resources:
               mode: '000440'
               owner: root
               group: root
-          services:
-            sysvinit:
-              cfn-hup:
-                enabled: 'true'
-                ensureRunning: 'true'
-                files:
-                - /etc/cfn/cfn-hup.conf
-                - /etc/cfn/hooks.d/cfn-auto-reloader.conf
-              awslogs:
-                enabled: 'true'
-                ensureRunning: 'true'
-                files:
-                - /etc/awslogs/awslogs.conf
-                packages:
-                  apt:
-                  - awslogs
+          # services:
+            # sysvinit:
+            #   cfn-hup:
+            #     enabled: 'true'
+            #     ensureRunning: 'true'
+            #     files:
+            #     - /etc/cfn/cfn-hup.conf
+            #     - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+              # awslogs:
+              #   enabled: 'true'
+              #   ensureRunning: 'true'
+              #   files:
+              #   - /etc/awslogs/awslogs.conf
+              #   packages:
+              #     apt:
+              #     - awslogs
     Properties:
       KeyName: !Ref KeyPair
       IamInstanceProfile: !Ref NewIamInstanceProfile
@@ -318,10 +359,24 @@ Resources:
         !Base64
           Fn::Sub: |
             #!/bin/bash
-            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource MagentoAMI  --region ${AWS::Region}
+            sudo add-apt-repository -y ppa:ondrej/php
+            touch test.txt 
+            sudo apt update && sudo apt -y upgrade
+            touch test1.txt 
+
+            ./install_awslogs.sh
+
+            sudo apt -y install heat-cfntools
+            touch test2.txt 
+
+            sudo cfn-init -v --stack ${AWS::StackName} --resource MagentoAMI  --region ${AWS::Region}
             chmod a+x install_magento.sh
+            touch test3.txt 
+
             ./install_magento.sh /tmp/params.txt
-            /opt/aws/bin/cfn-signal -e $? -d "`cat /home/ubuntu/adminuri`" -r "Build Process Complete" '${MagentoAMIWaitHandle}'
+            touch test4.txt 
+
+            sudo cfn-signal -e $? -d "`cat /home/ubuntu/adminuri`" -r "Build Process Complete" '${MagentoAMIWaitHandle}'
       Tags:
       - Key: Application
         Value: AWS Quick Start (Magento)
@@ -423,12 +478,12 @@ Resources:
       ServiceToken: !GetAtt AMICleanUpFunction.Arn
       AMIId: !GetAtt CreateAMI.ami
       Version: 1
-  NotificationTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      Subscription:
-      - Endpoint: !Ref NotificationEmail
-        Protocol: email
+  # NotificationTopic:
+  #   Type: AWS::SNS::Topic
+  #   Properties:
+  #     Subscription:
+  #     - Endpoint: !Ref NotificationEmail
+  #       Protocol: email
 Outputs:
   AdminURL:
     Description: Admin path
