@@ -213,96 +213,17 @@ Resources:
           type: S3
           roleName: !Ref NewIamInstanceRole
       AWS::CloudFormation::Init:
-        # configSets:
-        #   ascending:
-        #     - "installAwsLogs"
-        #     - "installMagento"
-        # installAwsLogs:
-        #   files:
-        #     /awslogs.conf:
-        #       content: !Sub |
-        #         [/home/ubuntu/misc/install]
-        #         datetime_format = %b %d %H:%M:%S
-        #         file = /var/log/cloud-init-output.log
-        #         buffer_duration = 5000
-        #         log_stream_name = {instance_id}/magento/install.log
-        #         initial_position = start_of_file
-        #         log_group_name = {instance_id}
-        #       mode: '000400'
-        #       owner: root
-        #       group: root
-        #     /install_awslogs.sh:
-        #       source: !Sub https://s3.amazonaws.com/deployment.kingfisherdirect/bb-cloudformation-templates/scripts/dev/install_awslogs.sh
-        #       mode: '000644'
-        #       owner: root
-        #       group: root
-        #       authentication: S3AccessCreds
-        #   commands:
-        #     command: "bash ./install_awslogs.sh"
         config:
           files:
-            /awslogs.conf:
-              content: !Sub |
-                [/home/ubuntu/misc/install]
-                datetime_format = %b %d %H:%M:%S
-                file = /var/log/cloud-init-output.log
-                buffer_duration = 5000
-                log_stream_name = {instance_id}/magento/install.log
-                initial_position = start_of_file
-                log_group_name = {instance_id}
-              mode: '000400'
-              owner: root
-              group: root
-            /install_awslogs.sh:
-              source: !Sub https://s3.amazonaws.com/deployment.kingfisherdirect/bb-cloudformation-templates/scripts/dev/install_awslogs.sh
-              mode: '000644'
-              owner: root
-              group: root
-              authentication: S3AccessCreds
-            /etc/awslogs/awslogs.conf:
-              content: !Sub |
-                [general]
-                state_file= /var/log/agent-state
-                [/home/ubuntu/misc/install]
-                file = /var/log/cloud-init-output.log
-                log_group_name = ${MagentoMainLogGroup}
-                log_stream_name = {instance_id}/magento/install.log
-              mode: '000400'
-              owner: root
-              group: root
-            # /etc/awslogs/awscli.conf:
-            #   content: !Sub |
-            #     [plugins]
-            #     cwlogs = cwlogs
-            #     [default]
-            #     region = ${AWS::Region}
-            #   mode: '000400'
-            #   owner: root
-            #   group: root
-            # /etc/cfn/cfn-hup.conf:
-            #   content: !Sub |
-            #     [main]
-            #     stack=${AWS::StackId}
-            #     region=${AWS::Region}
-            #   mode: '000400'
-            #   owner: root
-            #   group: root
-            # /etc/cfn/hooks.d/cfn-auto-reloader.conf:
-            #   content: !Sub |
-            #     [cfn-auto-reloader-hook]
-            #     triggers=post.update
-            #     path=Resources.LaunchConfig.Metadata.AWS::CloudFormation::Init
-            #     action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource LaunchConfig --region ${AWS::Region}
-            #     runas=root
             /install_magento.sh:
-              source: !Sub https://s3.amazonaws.com/deployment.kingfisherdirect/bb-cloudformation-templates/scripts/dev/install_magento.sh
-              mode: '000644'
+              source: https://s3.amazonaws.com/deployment.kingfisherdirect/bb-cloudformation-templates/scripts/dev/install_magento.sh
+              mode: '000744'
               owner: root
               group: root
               authentication: S3AccessCreds
             /configure_magento.sh:
-              source: !Sub https://s3.amazonaws.com/deployment.kingfisherdirect/bb-cloudformation-templates/scripts/dev/configure_magento.sh
-              mode: '000644'
+              source: https://s3.amazonaws.com/deployment.kingfisherdirect/bb-cloudformation-templates/scripts/dev/configure_magento.sh
+              mode: '000744'
               owner: root
               group: root
               authentication: S3AccessCreds
@@ -313,13 +234,14 @@ Resources:
               group: root
               authentication: S3AccessCreds
             /tmp/params.txt:
-              content:
-                !Sub |
+              content: 
+                !Sub 
+                - |
                   MySQLEndPointAddress|${MySQLEndPointAddress}
                   DBMasterUsername|${DBMasterUsername}
                   DBMasterUserPassword|${DBMasterUserPassword}
                   DBName|${DBName}
-                  DNSName|${DNSName}
+                  DNSName|${Param1}
                   AdminFirstName|${AdminFirstName}
                   AdminLastName|${AdminLastName}
                   AdminEmail|${AdminEmail}
@@ -329,25 +251,11 @@ Resources:
                   MagentoLanguage|${MagentoLanguage}
                   MagentoCurrency|${MagentoCurrency}
                   MagentoTimezone|${MagentoTimezone}
+                - Param1:
+                    - !GetAtt MagentoAMI.PublicIP
               mode: '000440'
               owner: root
               group: root
-          # services:
-            # sysvinit:
-            #   cfn-hup:
-            #     enabled: 'true'
-            #     ensureRunning: 'true'
-            #     files:
-            #     - /etc/cfn/cfn-hup.conf
-            #     - /etc/cfn/hooks.d/cfn-auto-reloader.conf
-              # awslogs:
-              #   enabled: 'true'
-              #   ensureRunning: 'true'
-              #   files:
-              #   - /etc/awslogs/awslogs.conf
-              #   packages:
-              #     apt:
-              #     - awslogs
     Properties:
       KeyName: !Ref KeyPair
       IamInstanceProfile: !Ref NewIamInstanceProfile
@@ -359,24 +267,25 @@ Resources:
         !Base64
           Fn::Sub: |
             #!/bin/bash
-            sudo add-apt-repository -y ppa:ondrej/php
-            touch test.txt 
-            sudo apt update && sudo apt -y upgrade
-            touch test1.txt 
+            set -x
 
-            ./install_awslogs.sh
+            apt -y update
+            apt -y upgrade
 
-            sudo apt -y install heat-cfntools
-            touch test2.txt 
+            apt -y install python-setuptools python-pip
+            curl https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz -O
+            tar xzfa aws-cfn-bootstrap-latest.tar.gz
+            mkdir -p /opt/aws/bin
 
-            sudo cfn-init -v --stack ${AWS::StackName} --resource MagentoAMI  --region ${AWS::Region}
-            chmod a+x install_magento.sh
-            touch test3.txt 
+            python /usr/lib/python2.7/dist-packages/easy_install.py \
+              --script-dir /opt/aws/bin \
+              aws-cfn-bootstrap-1.4
+
+            /opt/aws/bin/cfn-init --stack ${AWS::StackName} --resource MagentoAMI --region ${AWS::Region}
 
             ./install_magento.sh /tmp/params.txt
-            touch test4.txt 
 
-            sudo cfn-signal -e $? -d "`cat /home/ubuntu/adminuri`" -r "Build Process Complete" '${MagentoAMIWaitHandle}'
+            # /opt/aws/bin/cfn-signal -e $? -d "`cat /home/ubuntu/adminuri`" -r "Build Process Complete" '${MagentoAMIWaitHandle}'
       Tags:
       - Key: Application
         Value: AWS Quick Start (Magento)
@@ -467,6 +376,7 @@ Resources:
     Type: Custom::CreateAMI
     DeletionPolicy: Retain
     DependsOn: MagentoAMIWaitCondition
+    # DependsOn: MagentoAMI
     Properties:
       ServiceToken: !GetAtt AMIInfoFunction.Arn
       InstanceId: !Ref MagentoAMI

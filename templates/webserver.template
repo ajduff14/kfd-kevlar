@@ -348,7 +348,7 @@ Resources:
               owner: root
               group: root
               authentication: S3AccessCreds
-            /home/ec2-user/magento.tar.gz:
+            /home/r/magento.tar.gz:
               source: !Ref MagentoReleaseMedia
               mode: '000644'
               owner: root
